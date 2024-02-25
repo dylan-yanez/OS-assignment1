@@ -1,45 +1,62 @@
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Arrays;
 
-class Main {
-    static final double DOUBLE_MIN = 1.0;
-    static final double DOUBLE_MAX = 1000.0;
+class ArraySorter extends Thread {
+    private double[] array;
+    private int startIndex;
+    private int endIndex;
 
-    static class ArrayStruct {
-        double[] array;
-        int startIndex;
-        int endIndex;
-        int arraySize;
+    public ArraySorter(double[] array, int startIndex, int endIndex) {
+        this.array = array;
+        this.startIndex = startIndex;
+        this.endIndex = endIndex;
+    }
 
-        ArrayStruct(double[] array, int startIndex, int endIndex, int arraySize) {
-            this.array = array;
-            this.startIndex = startIndex;
-            this.endIndex = endIndex;
-            this.arraySize = arraySize;
+    public void run() {
+        // Sort the array
+        insertSort(array, startIndex, endIndex);
+    }
+
+    private void insertSort(double[] array, int left, int right) {
+        int i, j;
+        for (i = left + 1; i < right; i++) {
+            double key = array[i];
+            j = i - 1;
+            while (j >= left && array[j] > key) {
+                array[j + 1] = array[j];
+                j = j - 1;
+            }
+            array[j + 1] = key;
         }
     }
+}
 
-    static double getRandomDouble() {
-        return ThreadLocalRandom.current().nextDouble(DOUBLE_MIN, DOUBLE_MAX);
+public class Main {
+    private static final double DOUBLE_MIN = 1.0;
+    private static final double DOUBLE_MAX = 1000.0;
+
+    public static double getRandomDouble() {
+        return DOUBLE_MIN + (Math.random() * (DOUBLE_MAX - DOUBLE_MIN));
     }
 
-    static void populateArray(double[] array, int arraySize) {
-        for (int i = 0; i < arraySize; i++) {
+    public static void populateArray(double[] array) {
+        for (int i = 0; i < array.length; i++) {
             double random = getRandomDouble();
             array[i] = random;
         }
     }
 
-    static void printArray(double[] array, int arraySize) {
-        for (int i = 0; i < arraySize; i++) {
+    public static void printArray(double[] array) {
+        for (int i = 0; i < array.length; i++) {
             System.out.printf("Array[%d] = %.2f\n", i, array[i]);
         }
     }
 
-    static double[] merge(double[] array, int arrayTwoStart, int arraySize) {
+    public static double[] merge(double[] array, int arrayTwoStart, int arraySize) {
         int arrayOneIndex = 0;
         int arrayTwoIndex = arrayTwoStart;
 
         double[] mergedArray = new double[arraySize];
+
         for (int i = 0; i < arraySize; i++) {
             int index;
             if ((arrayOneIndex < arrayTwoStart) && (arrayTwoIndex == arraySize || array[arrayOneIndex] < array[arrayTwoIndex])) {
@@ -54,38 +71,12 @@ class Main {
         return mergedArray;
     }
 
-    static void insertionSort(double[] array, int left, int right) {
-        for (int i = left + 1; i < right; i++) {
-            double key = array[i];
-            int j = i - 1;
-            while (j >= left && array[j] > key) {
-                array[j + 1] = array[j];
-                j = j - 1;
-            }
-            array[j + 1] = key;
-        }
-    }
-
-    static void insertSort(ArrayStruct arg) {
-        double[] array = arg.array;
-        int left = arg.startIndex;
-        int right = arg.endIndex;
-        for (int i = left + 1; i < right; i++) {
-            double key = array[i];
-            int j = i - 1;
-            while (j >= left && array[j] > key) {
-                array[j + 1] = array[j];
-                j = j - 1;
-            }
-            array[j + 1] = key;
-        }
-    }
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         if (args.length != 1) {
             System.out.println("Incorrect use of command line parameters! Enter size of array.");
             return;
         }
+
         int arraySize = Integer.parseInt(args[0]);
         if (arraySize % 2 != 0 || arraySize < 2) {
             System.out.println("Must enter an even value!");
@@ -93,46 +84,35 @@ class Main {
         }
 
         double[] array = new double[arraySize];
-        populateArray(array, arraySize);
+        double[] arrayTwo = new double[arraySize];
 
-        double[] arrayTwo = array.clone();
+        populateArray(array);
+        System.arraycopy(array, 0, arrayTwo, 0, arraySize);
 
-        long ts_begin = System.nanoTime();
+        long startTime = System.nanoTime();
+        ArraySorter sorterThread1 = new ArraySorter(array, 0, arraySize);
+        sorterThread1.start();
+        sorterThread1.join();
+        long endTime = System.nanoTime();
+        double elapsedTime1 = (endTime - startTime) / 1e9;
 
-        insertSort(new ArrayStruct(array, 0, arraySize, arraySize));
-
-        long ts_end = System.nanoTime();
-
-        double elapsed1 = (ts_end - ts_begin) / 1e9;
-
-        int subArrayOneLeft = 0;
         int subArrayOneRight = arraySize / 2;
-
         int subArrayTwoLeft = subArrayOneRight;
-        int subArrayTwoRight = arraySize;
 
-        ts_begin = System.nanoTime();
-
-        Thread firstHalfThread = new Thread(() -> insertSort(new ArrayStruct(arrayTwo, subArrayOneLeft, subArrayOneRight, arraySize)));
-        Thread secondHalfThread = new Thread(() -> insertSort(new ArrayStruct(arrayTwo, subArrayTwoLeft, subArrayTwoRight, arraySize)));
-
-        firstHalfThread.start();
-        secondHalfThread.start();
-
-        try {
-            firstHalfThread.join();
-            secondHalfThread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
+        startTime = System.nanoTime();
+        ArraySorter sorterThread3 = new ArraySorter(arrayTwo, 0, subArrayOneRight);
+        ArraySorter sorterThread4 = new ArraySorter(arrayTwo, subArrayTwoLeft, arraySize);
+        sorterThread3.start();
+        sorterThread4.start();
+        sorterThread3.join();
+        sorterThread4.join();
         double[] mergedArray = merge(arrayTwo, subArrayTwoLeft, arraySize);
+        endTime = System.nanoTime();
+        double elapsedTime2 = (endTime - startTime) / 1e9;
 
-        ts_end = System.nanoTime();
-
-        double elapsed2 = (ts_end - ts_begin) / 1e9;
-
-        System.out.printf("Sorting is done in %.2f seconds when using one thread!\n", elapsed1);
-        System.out.printf("Sorting is done in %.2f seconds when using two threads!\n", elapsed2);
+        System.out.println("Sorting is done in " + elapsedTime1 + " seconds when using one thread!");
+        //printArray(array);
+        System.out.println("Sorting is done in " + elapsedTime2 + " seconds when using two threads!");
+        //printArray(mergedArray);
     }
 }
