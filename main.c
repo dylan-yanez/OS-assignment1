@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
         printf("Must enter an even value!\n");
         return 1;
     }
-    printf("Creating array of size %d\n", arraySize);
+    //printf("Creating array of size %d\n", arraySize);
     
     double *array = malloc(arraySize * sizeof(double));
     if (array == NULL) {
@@ -163,10 +163,10 @@ int main(int argc, char *argv[]) {
     
     double elapsed2 = elapsed * 1000;
     
-    printArray(array, arraySize);
-    printf("Time %.2lf\n", elapsed1);
-    printArray(mergedArray, arraySize);
-    printf("Time %.2lf\n", elapsed2);
+    //printArray(array, arraySize);
+    printf("Sorting is done in %.2lf seconds when using one thread!\n", elapsed1);
+    //printArray(mergedArray, arraySize);
+    printf("Sorting is done in %.2lf seconds when using two threads!\n", elapsed2);
     
     free(array);
     free(mergedArray);
